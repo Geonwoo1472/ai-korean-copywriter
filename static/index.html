@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
+    <title>AI 카피라이터 & 올인원 글쓰기 도우미</title>
+    <meta name="description" content="AI 기반 한국어 카피라이터 및 글쓰기 도우미. Gemini, OpenAI, Ollama를 선택적으로 활용하여 매체·톤·키워드에 최적화된 한국어 텍스트를 실시간 생성합니다.">
+    <meta name="keywords" content="AI 카피라이터, 한국어 글쓰기, Gemini, OpenAI, Ollama, 카피라이팅, 텍스트 생성">
+    <meta name="author" content="Geonwoo1472">
+    <meta name="theme-color" content="#6366f1">
+    <!-- Open Graph -->
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="AI 카피라이터 - 한국어 글쓰기 도우미">
+    <meta property="og:description" content="매체·톤·키워드에 최적화된 고품질 한국어 텍스트를 실시간 AI로 생성합니다.">
+    <meta property="og:image" content="/static/screenshot.png">
+    <!-- Mobile -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="format-detection" content="telephone=no">
+    <!-- Anti-FOUC: 페이지 렌더 전에 테마를 즉시 적용 -->
+    <script>
+        (function(){
+            var s = localStorage.getItem('theme') || 'auto';
+            var d = (s === 'auto')
+                ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
+                : s;
+            document.documentElement.setAttribute('data-theme', d);
+            document.documentElement.setAttribute('data-theme-setting', s);
+        })();
+    </script>
+    <link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/style.css">
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+</head>
+<body>
+    <!-- Subtle background glows for premium aesthetics -->
+    <div class="bg-glow bg-glow-1"></div>
+    <div class="bg-glow bg-glow-2"></div>
+
+    <div class="container">
+        <header>
+            <h1>✨ AI 카피라이터</h1>
+            <p class="header-subtitle">모든 주제와 매체에 맞춰 드리는 올인원 한국어 글쓰기 도우미</p>
+
+            <div class="header-controls">
+                <!-- 테마 토글 -->
+                <div class="theme-toggle" id="themeToggle" role="radiogroup" aria-label="테마 설정">
+                    <button class="theme-btn" data-theme-value="light" title="라이트 모드" aria-label="라이트 모드">
+                        <span class="theme-icon">☀️</span>
+                        <span class="theme-label">라이트</span>
+                    </button>
+                    <button class="theme-btn active" data-theme-value="auto" title="시스템 자동" aria-label="시스템 자동">
+                        <span class="theme-icon">🔄</span>
+                        <span class="theme-label">자동</span>
+                    </button>
+                    <button class="theme-btn" data-theme-value="dark" title="다크 모드" aria-label="다크 모드">
+                        <span class="theme-icon">🌙</span>
+                        <span class="theme-label">다크</span>
+                    </button>
+                </div>
+
+                <!-- AI 엔진 상태 배지 -->
+                <div class="active-engine-badge" id="activeEngineBadge">
+                    <span class="status-dot"></span>
+                    <span class="status-text">AI 엔진 상태 감지 중...</span>
+                </div>
+            </div>
+        </header>
+        
+        <main>
+            <div class="form-card">
+                <div class="form-group">
+                    <label for="engine">사용할 AI 엔진</label>
+                    <select id="engine">
+                        <option value="auto">자동 감지 (서버 환경 변수 기준)</option>
+                        <option value="gemini">Google Gemini (클라우드 API)</option>
+                        <option value="openai">OpenAI GPT (클라우드 API)</option>
+                        <option value="local">로컬 GPU/CPU (Ollama)</option>
+                        <option value="custom">Custom API (OpenAI 호환 - DeepSeek, Groq 등)</option>
+                    </select>
+                </div>
+
+                <!-- Gemini Sub Settings -->
+                <div id="geminiSettings" class="engine-sub-settings" style="display: none; margin-bottom: 1.75rem;">
+                    <div class="form-group" style="margin-bottom: 1rem;">
+                        <label for="geminiModel">Gemini 모델 선택</label>
+                        <select id="geminiModel">
+                            <option value="gemini-2.0-flash">Gemini 2.0 Flash (빠르고 안정적 - 추천)</option>
+                            <option value="gemini-2.0-flash-lite">Gemini 2.0 Flash Lite (가장 가벼움, 높은 한도)</option>
+                            <option value="gemini-1.5-flash">Gemini 1.5 Flash (이전 세대, 안정적)</option>
+                            <option value="gemini-1.5-pro">Gemini 1.5 Pro (복잡한 추론 및 고성능)</option>
+                            <option value="gemini-2.5-flash">Gemini 2.5 Flash (최신 세대 모델)</option>
+                        </select>
+                    </div>
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <label for="geminiApiKey">Gemini API Key</label>
+                        <input type="password" id="geminiApiKey" placeholder="API 키 입력 (비워두면 서버 .env 키 사용)" autocomplete="new-password">
+                    </div>
+                </div>
+
+                <!-- OpenAI Sub Settings -->
+                <div id="openaiSettings" class="engine-sub-settings" style="display: none; margin-bottom: 1.75rem;">
+                    <div class="form-group" style="margin-bottom: 1rem;">
+                        <label for="openaiModel">OpenAI 모델 선택</label>
+                        <select id="openaiModel">
+                            <option value="gpt-4o-mini">GPT-4o-mini (가성비 및 응답 속도 우수 - 추천)</option>
+                            <option value="gpt-4o">GPT-4o (최고 성능 모델)</option>
+                        </select>
+                    </div>
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <label for="openaiApiKey">OpenAI API Key</label>
+                        <input type="password" id="openaiApiKey" placeholder="API 키 입력 (비워두면 서버 .env 키 사용)" autocomplete="new-password">
+                    </div>
+                </div>
+
+                <!-- Custom API Sub Settings -->
+                <div id="customSettings" class="engine-sub-settings" style="display: none; margin-bottom: 1.75rem;">
+                    <!-- Preset buttons for quick configuration -->
+                    <div class="preset-container" style="margin-bottom: 1.25rem;">
+                        <span style="display: block; font-size: 0.85rem; font-weight: 700; margin-bottom: 0.5rem; color: var(--text-label);">빠른 프리셋 설정</span>
+                        <div class="preset-buttons">
+                            <button type="button" class="btn-preset active" id="presetGroq" data-preset="groq">Groq (Llama 3.3)</button>
+                            <button type="button" class="btn-preset" id="presetDeepSeek" data-preset="deepseek">DeepSeek</button>
+                            <button type="button" class="btn-preset" id="presetDirect" data-preset="direct">직접 입력</button>
+                        </div>
+                    </div>
+                    <div class="form-group-row" style="margin-bottom: 1rem; gap: 1rem;">
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label for="customModel">Custom 모델명</label>
+                            <input type="text" id="customModel" placeholder="예: deepseek-chat, claude-3-5-sonnet">
+                        </div>
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label for="customBaseUrl">Custom API Base URL</label>
+                            <input type="text" id="customBaseUrl" placeholder="예: https://api.deepseek.com/v1">
+                        </div>
+                    </div>
+                    <div class="form-group" style="margin-bottom: 0; margin-top: 1rem;">
+                        <label for="customApiKey">Custom API Key</label>
+                        <input type="password" id="customApiKey" placeholder="API 키 입력 (비워두면 서버 .env 키 사용)" autocomplete="new-password">
+                    </div>
+                </div>
+
+                <!-- Ollama Sub Settings & Guide -->
+                <div id="localSettings" class="engine-sub-settings" style="display: none; margin-bottom: 1.75rem;">
+                    <!-- Ollama 상태 표시 -->
+                    <div id="ollamaStatusPanel" class="ollama-status-panel">
+                        <div class="ollama-status-header">
+                            <div class="ollama-status-indicator">
+                                <span class="ollama-dot" id="ollamaDot"></span>
+                                <span id="ollamaStatusText">Ollama 연결 상태 확인 중...</span>
+                            </div>
+                            <button class="btn-icon" id="ollamaRefreshBtn" title="상태 새로고침" aria-label="Ollama 상태 새로고침">🔄</button>
+                        </div>
+                    </div>
+
+                    <div class="form-group-row" style="margin-bottom: 1rem; gap: 1rem; margin-top: 1rem;">
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label for="localModel">Ollama 모델명</label>
+                            <input type="text" id="localModel" list="localModelList" value="gemma2:2b" placeholder="예: gemma2:2b, llama3">
+                            <datalist id="localModelList">
+                                <option value="gemma2:2b">gemma2:2b (1.6GB, 가벼움)</option>
+                                <option value="gemma3:4b">gemma3:4b (3.3GB, 균형)</option>
+                                <option value="llama3:8b">llama3:8b (4.7GB)</option>
+                                <option value="eeve:10.8b">eeve:10.8b (한국어 특화)</option>
+                            </datalist>
+                        </div>
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label for="localUrl">Ollama API 주소</label>
+                            <input type="text" id="localUrl" value="http://localhost:11434/v1" placeholder="http://localhost:11434/v1">
+                        </div>
+                    </div>
+
+                    <!-- 모델 자동 설치 패널 -->
+                    <div id="ollamaInstallPanel" class="ollama-install-panel">
+                        <div class="install-title">📦 모델 원클릭 설치</div>
+                        <div class="install-models-grid">
+                            <button class="install-model-btn" data-model="gemma2:2b" data-size="1.6GB">
+                                <span class="model-name">gemma2:2b</span>
+                                <span class="model-meta">1.6GB · 가장 가벼움</span>
+                            </button>
+                            <button class="install-model-btn" data-model="gemma3:4b" data-size="3.3GB">
+                                <span class="model-name">gemma3:4b</span>
+                                <span class="model-meta">3.3GB · 균형 잡힌 성능</span>
+                            </button>
+                            <button class="install-model-btn" data-model="llama3:8b" data-size="4.7GB">
+                                <span class="model-name">llama3:8b</span>
+                                <span class="model-meta">4.7GB · Meta 최신 모델</span>
+                            </button>
+                            <button class="install-model-btn" data-model="eeve:10.8b" data-size="6.4GB">
+                                <span class="model-name">eeve:10.8b</span>
+                                <span class="model-meta">6.4GB · 한국어 특화</span>
+                            </button>
+                        </div>
+                        <!-- 다운로드 진행률 -->
+                        <div id="pullProgressContainer" class="pull-progress-container" style="display: none;">
+                            <div class="pull-progress-info">
+                                <span id="pullModelName" class="pull-model-name">모델 다운로드 중...</span>
+                                <span id="pullPercent" class="pull-percent">0%</span>
+                            </div>
+                            <div class="pull-progress-track">
+                                <div class="pull-progress-fill" id="pullProgressFill" style="width: 0%"></div>
+                            </div>
+                            <div id="pullStatus" class="pull-status">준비 중...</div>
+                        </div>
+                    </div>
+                    
+                    <div class="local-guide-box">
+                        <div class="guide-title">🖥️ Ollama가 설치되어 있지 않다면?</div>
+                        <ol class="guide-list">
+                            <li><strong>Ollama 설치:</strong> <a href="https://ollama.com" target="_blank" rel="noopener noreferrer" class="guide-link">ollama.com</a>에서 프로그램을 무료 설치 및 실행합니다. (Windows / macOS / Linux 지원)</li>
+                            <li><strong>설치 후:</strong> 이 페이지로 돌아와 위의 <strong>"모델 원클릭 설치"</strong> 버튼을 누르면 자동으로 모델이 설치됩니다!</li>
+                            <li><strong>GPU 가속:</strong> 외장 그래픽카드(NVIDIA/AMD)가 있으면 Ollama가 자동으로 GPU를 활용하여 <strong>매우 빠르게</strong> 실행됩니다.</li>
+                        </ol>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="topic">글의 주제 또는 분야</label>
+                    <input type="text" id="topic" placeholder="예: 개인 블로그 맛집 리뷰, 신제품 마케팅, 동호회 모집, 일상 일기 등" required>
+                </div>
+                
+                <div class="form-group-row">
+                    <div class="form-group">
+                        <label for="purpose">어디에 올리실 건가요?</label>
+                        <select id="purpose">
+                            <option value="instagram">인스타그램 / SNS 피드</option>
+                            <option value="blog">블로그 포스팅</option>
+                            <option value="karrot">당근마켓 / 동네 커뮤니티</option>
+                            <option value="email">비즈니스 / 일반 이메일</option>
+                            <option value="sms">안내 및 일반 문자메시지</option>
+                            <option value="general">일반 글쓰기 / 에세이</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="tone">원하는 톤앤매너</label>
+                        <select id="tone">
+                            <option value="친근하고 따뜻하게">친근하고 따뜻하게</option>
+                            <option value="전문적이고 신뢰감 있게">전문적이고 신뢰감 있게</option>
+                            <option value="트렌디하고 감각적으로">트렌디하고 감각적으로</option>
+                            <option value="유머러스하고 재치있게">유머러스하고 재치있게</option>
+                            <option value="정중하고 격식 있게">정중하고 격식 있게</option>
+                            <option value="간결하고 명확하게">간결하고 명확하게</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="keywords">반드시 포함할 키워드 (쉼표로 구분)</label>
+                    <input type="text" id="keywords" placeholder="예: 봄나들이, 내돈내산, 신메뉴 출시, 가성비 최고" required>
+                </div>
+                
+                <div class="btn-row">
+                    <button id="generateBtn" class="btn-primary">글 작성 시작하기 🚀</button>
+                    <button id="stopBtn" class="btn-stop" style="display: none;" aria-label="생성 중단">⏹ 중단</button>
+                </div>
+            </div>
+
+            <div class="result-card" id="resultCard" style="display: none;">
+                <!-- 프로그레스 바 -->
+                <div id="progressContainer" class="progress-container" style="display: none;">
+                    <div class="progress-header">
+                        <span id="progressStage" class="progress-stage">AI 엔진 준비 중...</span>
+                        <span id="progressPercent" class="progress-percent">0%</span>
+                    </div>
+                    <div class="progress-track">
+                        <div class="progress-fill" id="progressFill" style="width: 0%"></div>
+                    </div>
+                    <div class="progress-steps">
+                        <div class="step active" id="step1">
+                            <span class="step-dot"></span>
+                            <span class="step-label">연결</span>
+                        </div>
+                        <div class="step" id="step2">
+                            <span class="step-dot"></span>
+                            <span class="step-label">생성</span>
+                        </div>
+                        <div class="step" id="step3">
+                            <span class="step-dot"></span>
+                            <span class="step-label">완료</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="result-header" id="resultHeader" style="display: none;">
+                    <h2>생성된 완성본</h2>
+                    <button id="copyBtn" class="btn-secondary" aria-label="결과 복사하기">복사하기</button>
+                </div>
+                <div id="resultContent" class="markdown-body">
+                    <!-- Result will be injected here -->
+                </div>
+            </div>
+        </main>
+
+        <footer>
+            <p>Built with FastAPI + Vanilla JS · <a href="https://github.com/Geonwoo1472/ai-korean-copywriter" target="_blank" rel="noopener noreferrer" class="footer-link">GitHub</a></p>
+        </footer>
+    </div>
+    <script src="/static/script.js"></script>
+</body>
+</html>
